@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+
+    <link href="./flot/examples.css" rel="stylesheet" type="text/css" />
+    <script
+      language="javascript"
+      type="text/javascript"
+      src="./flot/jquery.js"
+    ></script>
+    <script
+      language="javascript"
+      type="text/javascript"
+      src="./flot/jquery.canvaswrapper.js"
+    ></script>
+    <script
+      language="javascript"
+      type="text/javascript"
+      src="./flot/jquery.colorhelpers.js"
+    ></script>
+    <script
+      language="javascript"
+      type="text/javascript"
+      src="./flot/jquery.flot.js"
+    ></script>
+    <script
+      language="javascript"
+      type="text/javascript"
+      src="./flot/jquery.flot.saturated.js"
+    ></script>
+    <script
+      language="javascript"
+      type="text/javascript"
+      src="./flot/jquery.flot.browser.js"
+    ></script>
+    <script
+      language="javascript"
+      type="text/javascript"
+      src="./flot/jquery.flot.drawSeries.js"
+    ></script>
+    <script
+      language="javascript"
+      type="text/javascript"
+      src="./flot/jquery.flot.uiConstants.js"
+    ></script>
+    <script
+      language="javascript"
+      type="text/javascript"
+      src="./flot/jquery.flot.logaxis.js"
+    ></script>
+    <script
+      language="javascript"
+      type="text/javascript"
+      src="./flot/jquery.flot.symbol.js"
+    ></script>
+    <script
+      language="javascript"
+      type="text/javascript"
+      src="./flot/jquery.flot.flatdata.js"
+    ></script>
+    <script
+      language="javascript"
+      type="text/javascript"
+      src="./flot/jquery.flot.navigate.js"
+    ></script>
+    <script
+      language="javascript"
+      type="text/javascript"
+      src="./flot/jquery.flot.fillbetween.js"
+    ></script>
+    <script
+      language="javascript"
+      type="text/javascript"
+      src="./flot/jquery.flot.stack.js"
+    ></script>
+    <script
+      language="javascript"
+      type="text/javascript"
+      src="./flot/jquery.flot.touchNavigate.js"
+    ></script>
+    <script
+      language="javascript"
+      type="text/javascript"
+      src="./flot/jquery.flot.hover.js"
+    ></script>
+    <script
+      language="javascript"
+      type="text/javascript"
+      src="./flot/jquery.flot.touch.js"
+    ></script>
+    <script
+      language="javascript"
+      type="text/javascript"
+      src="./flot/jquery.flot.time.js"
+    ></script>
+    <script
+      language="javascript"
+      type="text/javascript"
+      src="./flot/jquery.flot.axislabels.js"
+    ></script>
+    <script
+      language="javascript"
+      type="text/javascript"
+      src="./flot/jquery.flot.selection.js"
+    ></script>
+    <script
+      language="javascript"
+      type="text/javascript"
+      src="./flot/jquery.flot.composeImages.js"
+    ></script>
+    <script
+      language="javascript"
+      type="text/javascript"
+      src="./flot/jquery.flot.legend.js"
+    ></script>
+
+    <style>
+      #drop_zone {
+        border: 2px dashed #bbb;
+        -moz-border-radius: 5px;
+        -webkit-border-radius: 5px;
+        border-radius: 5px;
+        padding: 25px;
+        text-align: center;
+        font: 20pt bold "Vollkorn";
+        color: #bbb;
+      }
+
+      #main_data_body {
+        height: 200px;
+        overflow: scroll;
+        display: block;
+      }
+
+      #leftContent {
+        float: left;
+        display: inline;
+        width: 400px;
+      }
+      #centerContent {
+        float: left;
+        display: inline;
+      }
+	  #input_equation {
+		display: flex;
+		align-items: flex-start;
+		margin: 0;
+	  }
+    </style>
+
+    <script
+      type="text/javascript"
+      async
+      src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"
+    >
+      MathJax.Hub.Config({
+        jax: ["input/TeX","output/HTML-CSS"],
+        extensions: ["tex2jax.js"],
+        tex2jax: {
+          inlineMath: [ ['\\(','\\)'] ],
+          displayMath: [ ['$$','$$'] ]
+        }
+      });
+    </script>
+
+    <script>
+      function fitDataWrapper(arra, inpp) {
+        //A*EXP(-b*[time])*COS(w*[time]+ϕ)
+        a = inpp[0];
+        b = inpp[1];
+        w = inpp[2];
+        p = inpp[3];
+        arra.forEach(function (element) {
+          element[2] =
+            a * Math.exp(-b * element[0]) * Math.cos(w * element[0] + p);
+          element[3] = Math.pow(element[1] - element[2], 2);
+        });
+      }
+
+      function totalErr(tad) {
+        totEr = 0;
+        for (i = 0; i < tad.length; i++) {
+          totEr = totEr + tad[i][3];
+        }
+        erOu = document.getElementById("error_output");
+        errorEqStr =
+          "\\( \\sum \\left(\\theta_{\\text{fit}} - \\theta_{\\text{exp}}\\right)^2 \\)  = ";
+        teEqNo = document.createElement("p");
+        teEqNo.innerHTML = errorEqStr;
+        erOu.appendChild(teEqNo);
+        teNo = document.createElement("p");
+        teNo.setAttribute("id", "error_total");
+        teNo.innerHTML = totEr;
+        erOu.appendChild(teNo);
+        MathJax.Hub.Queue(["Typeset", MathJax.Hub, "error_output"]);
+      }
+
+      function initInputValues(fnInputs) {
+        var tableinput = document.createElement("table");
+        var tableBodyinput = document.createElement("tbody");
+
+        var conttain = document.getElementById("input_fields");
+        tableinput.border = "0";
+        tableinput.appendChild(tableBodyinput);
+
+        inputtedVals = [];
+        for (const [key, value] of Object.entries(fnInputs)) {
+          var tr = document.createElement("TR");
+          for (j = 0; j < 2; j++) {
+            var td = document.createElement("TD");
+            if (j) {
+              var input = document.createElement("input");
+              input.type = "number";
+              input.value = value[1];
+              input.setAttribute("id", "input-" + value[0]);
+              input.setAttribute("step", value[2]);
+              input.oninput = updateVals;
+              td.appendChild(input);
+              tr.appendChild(td);
+              inputtedVals.push(value[1]);
+            } else {
+              td.appendChild(document.createTextNode(key));
+              tr.appendChild(td);
+            }
+          }
+          tableBodyinput.appendChild(tr);
+        }
+        conttain.appendChild(tableinput);
+
+		equ_fit = document.getElementById("input_equation");
+		equ_fit.innerHTML = "$$A \\exp\\left(-b \\cdot t\\right) \\cos\\left(\\omega \\cdot t + \\phi\\right)$$"
+
+		MathJax.Hub.Queue(["Typeset", MathJax.Hub, "input_equation"]);
+        return inputtedVals;
+      }
+
+      function getInputValues(reloadWDefaults) {
+        fnInputs = {
+          A: ["a", 1, 0.1],
+          b: ["b", 0.02, 0.1],
+          ω: ["w", 5, 0.01],
+          ϕ: ["p", 0, 0.1],
+        };
+
+        var aselect = document.getElementById("input-a");
+        if (aselect == null) {
+          return initInputValues(fnInputs);
+        }
+        inputtedVals = [];
+        for (const value of Object.values(fnInputs)) {
+          inputDefault = value[1];
+          inputElem = document.getElementById("input-" + value[0]);
+          if (inputElem != null) {
+            inputValue = parseFloat(inputElem.value);
+            if (isNaN(inputValue)) {
+              if (reloadWDefaults) {
+                inputElem.value = inputDefault;
+              } else {
+                inputElem.value = inputElem.value;
+              }
+              inputtedVals.push(inputDefault);
+            } else {
+              inputtedVals.push(inputValue);
+            }
+          } else {
+            inputtedVals.push(inputDefault);
+          }
+        }
+        return inputtedVals;
+      }
+
+      function parse_file(inFile) {
+        var totallines = [];
+        runNum = -1;
+        inFile.split("\n").forEach(function (element) {
+          totallines.push(element.split(","));
+        });
+
+        numOfRun = Math.ceil(totallines[0].length / 8);
+        if (runNum == 0) {
+          runNum = 1;
+        }
+        if (numOfRun < runNum || runNum < 0) {
+          runNum = numOfRun;
+        }
+        offsetRun = (runNum - 1) * 8;
+        console.log("Run " + runNum + " selected");
+        var keepLines = [];
+        for (i = 0; i < totallines.length; i++) {
+          timeBuff = parseFloat(totallines[i][1 + offsetRun]);
+          thetaBuff = parseFloat(totallines[i][2 + offsetRun]);
+          if (!isNaN(timeBuff) && !isNaN(thetaBuff)) {
+            if (0 < timeBuff) {
+              keepLines.push([timeBuff, thetaBuff]);
+            }
+          }
+        }
+        totallines = keepLines;
+        var hiddenLength = document.createElement("p");
+        hiddenLength.innerText = totallines.length;
+        hiddenLength.setAttribute("id", "filelength");
+        hiddenLength.style.display = "none";
+        document.body.appendChild(hiddenLength);
+
+        inn = getInputValues(true);
+        fitDataWrapper(totallines, inn);
+        addTable(totallines);
+        totalErr(totallines);
+
+        plotCont = document.getElementById("plot-cont");
+        plotCont.style.visibility = "visible";
+
+        var d1 = [];
+        var d2 = [];
+        for (var i = 0; i < totallines.length; i++) {
+          d1.push([totallines[i][0], totallines[i][1]]);
+          d2.push([totallines[i][0], totallines[i][2]]);
+        }
+
+        var options = {
+          legend: {
+            position: "ne",
+            container: null,
+            show: true,
+          },
+        };
+
+        $.plot(
+          "#placeholder",
+          [
+            { color: "blue", label: "Experimental Data", data: d1 },
+            { color: "red", label: "Fitted Data", data: d2 },
+          ],
+          options
+        );
+      }
+
+      function parseTable() {
+        filelength = document.getElementById("filelength").innerHTML;
+        tableInfo = [];
+        for (i = 0; i < filelength; i++) {
+          tableInfo[i] = [];
+          for (j = 0; j < 4; j++) {
+            if (j == 0) {
+              tdid = "time_".concat(i + 1);
+            }
+            if (j == 1) {
+              tdid = "exp_".concat(i + 1);
+            }
+            if (j == 2) {
+              tdid = "fit_".concat(i + 1);
+            }
+            if (j == 3) {
+              tdid = "error_".concat(i + 1);
+            }
+            tableInfo[i][j] = document.getElementById(tdid).innerHTML;
+          }
+        }
+        return tableInfo;
+      }
+
+      function updateVals() {
+        var valus = parseTable();
+        var inps = getInputValues(false);
+        fitDataWrapper(valus, inps);
+        totEr = 0;
+        for (i = 0; i < valus.length; i++) {
+          totEr = totEr + valus[i][3];
+        }
+        document.getElementById("error_total").innerHTML = totEr;
+        for (i = 0; i < valus.length; i++) {
+          for (j = 2; j < valus[i].length; j++) {
+            if (j == 2) {
+              tdid = "fit_".concat(i + 1);
+            }
+            if (j == 3) {
+              tdid = "error_".concat(i + 1);
+            }
+            document.getElementById(tdid).innerHTML = valus[i][j];
+          }
+        }
+
+        var d1 = [];
+        var d2 = [];
+        for (var i = 0; i < valus.length; i++) {
+          d1.push([valus[i][0], valus[i][1]]);
+          d2.push([valus[i][0], valus[i][2]]);
+        }
+        var options = {
+          legend: {
+            position: "ne",
+            container: null,
+            show: true,
+          },
+        };
+        $.plot(
+          "#placeholder",
+          [
+            { color: "blue", label: "Experimental Data", data: d1 },
+            { color: "red", label: "Fitted Data", data: d2 },
+          ],
+          options
+        );
+      }
+
+      function addTable(inpu) {
+        var myTableDiv = document.getElementById("table_results");
+        var table = document.createElement("table");
+        var tableBody = document.createElement("tbody");
+
+        tableBody.setAttribute("id", "main_data_body");
+        table.border = "1";
+        table.appendChild(tableBody);
+
+        var heading = new Array();
+        heading[0] = "Time";
+        heading[1] = "\\(\\theta_{\\text{exp}}\\)";
+        heading[2] = "\\(\\theta_{\\text{fit}}\\)";
+        heading[3] =
+          "\\(\\left(\\theta_{\\text{fit}} - \\theta_{\\text{exp}}\\right)^2 \\)";
+
+        var data = inpu;
+
+        //Table Columns
+        var tr = document.createElement("tr");
+        tableBody.appendChild(tr);
+        for (i = 0; i < heading.length; i++) {
+          var th = document.createElement("th");
+          th.width = "75";
+          th.appendChild(document.createTextNode(heading[i]));
+          tr.appendChild(th);
+        }
+
+        //Table Rows
+        for (i = 0; i < data.length; i++) {
+          var tr = document.createElement("TR");
+          for (j = 0; j < data[i].length; j++) {
+            var td = document.createElement("TD");
+            td.appendChild(document.createTextNode(data[i][j]));
+            if (j == 0) {
+              td.setAttribute("id", "time_".concat(i + 1));
+            }
+            if (j == 1) {
+              td.setAttribute("id", "exp_".concat(i + 1));
+            }
+            if (j == 2) {
+              td.setAttribute("id", "fit_".concat(i + 1));
+            }
+            if (j == 3) {
+              td.setAttribute("id", "error_".concat(i + 1));
+            }
+            tr.appendChild(td);
+          }
+          tableBody.appendChild(tr);
+        }
+        myTableDiv.appendChild(table);
+        MathJax.Hub.Queue(["Typeset", MathJax.Hub, "table_results"]);
+      }
+
+      function onFileChange() {
+        const [file] = document.getElementById("fileinput").files;
+        const reader = new FileReader();
+        reader.addEventListener(
+          "load",
+          () => {
+            parse_file(reader.result);
+          },
+          false
+        );
+
+        if (file) {
+          reader.readAsText(file);
+        }
+      }
+
+      function loadExampleData() {
+        fetch("in_data.csv")
+          .then((response) => response.text())
+          .then((text) => parse_file(text));
+      }
+    </script>
+  </head>
+  <body>
+    <div id="main">
+      <div id="leftContent">
+		<h2>Manual fitting lab</h2>
+		<p>This web app was made for a lab in which students would learn how dampened cosine functions work; after the previous software became hard to maintain and use</p>
+        <p>Load a file</p>
+        <input type="file" id="fileinput" onchange="onFileChange()" /><br />
+        <br />
+        <button onclick="loadExampleData()">Load example data</button>
+        <br />
+        <br />
+		<p id="input_equation"></p>
+		<br />
+        <div id="input_fields"></div>
+        <br />
+        <br />
+        <div id="error_output"></div>
+        <br />
+        <ul style="list-style-type: none; padding-left: 0px">
+          <li><h3>Thanks</h3></li>
+          <li><a href="https://github.com/flot/flot"> Flot </a></li>
+          <li><a href="https://www.mathjax.org/"> MathJax </a></li>
+        </ul>
+      </div>
+      <div id="centerContent">
+        <div id="table_parent">
+          <div id="table_results"></div>
+        </div>
+        <div id="plot-cont" class="demo-container" style="visibility: hidden">
+          <div id="placeholder" class="demo-placeholder"></div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
